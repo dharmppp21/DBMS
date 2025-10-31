@@ -55,54 +55,11 @@ const AuthProvider = ({ children }) => {
 
 const useAuth = () => useContext(AuthContext);
 
-// Notification Context
-const NotificationContext = createContext();
-
-const NotificationProvider = ({ children }) => {
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: "approved",
-      title: "Batch Approved",
-      message: "Your donation batch BTH005 has been approved!",
-      timestamp: "2024-10-30T14:30:00",
-      read: false
-    },
-    {
-      id: 2,
-      type: "pickup",
-      title: "Pickup Scheduled",
-      message: "Pickup for batch BTH003 scheduled for tomorrow at 2 PM.",
-      timestamp: "2024-10-29T10:15:00",
-      read: false
-    }
-  ]);
-
-  const markAsRead = (id) => {
-    setNotifications(prev => 
-      prev.map(notif => notif.id === id ? { ...notif, read: true } : notif)
-    );
-  };
-
-  const deleteNotification = (id) => {
-    setNotifications(prev => prev.filter(notif => notif.id !== id));
-  };
-
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  return (
-    <NotificationContext.Provider value={{ notifications, markAsRead, deleteNotification, unreadCount }}>
-      {children}
-    </NotificationContext.Provider>
-  );
-};
-
-const useNotifications = () => useContext(NotificationContext);
-
 // Login Page Component
 const LoginPage = () => {
   const [activeTab, setActiveTab] = useState('login');
-  const { login, register } = useAuth();
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const { login } = useAuth();
 
   return (
     <div className="auth-page">
@@ -129,7 +86,19 @@ const LoginPage = () => {
           </div>
           
           <div className="auth-body">
-            {activeTab === 'login' ? <LoginForm login={login} /> : <RegisterForm register={register} />}
+            {registrationSuccess && activeTab === 'login' && (
+              <div style={{padding: '12px', backgroundColor: '#d4edda', color: '#155724', borderRadius: '4px', marginBottom: '16px', border: '1px solid #c3e6cb'}}>
+                Registration successful! Please login with your credentials.
+              </div>
+            )}
+            {activeTab === 'login' ? (
+              <LoginForm login={login} />
+            ) : (
+              <RegisterForm onSuccess={() => {
+                setRegistrationSuccess(true);
+                setActiveTab('login');
+              }} />
+            )}
           </div>
         </div>
       </div>
@@ -237,7 +206,7 @@ const LoginForm = ({ login }) => {
 };
 
 // Register Form Component
-const RegisterForm = ({ register }) => {
+const RegisterForm = ({ onSuccess }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -245,16 +214,22 @@ const RegisterForm = ({ register }) => {
     password: '',
     confirmPassword: '',
     institution: '',
+    year_class: '',
     address: ''
   });
   const [errors, setErrors] = useState({});
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const newErrors = {};
     
     if (!formData.name) newErrors.name = 'Name is required';
     if (!formData.email) newErrors.email = 'Email is required';
+    if (!formData.phone) newErrors.phone = 'Phone is required';
+    if (!formData.institution) newErrors.institution = 'Institution is required';
+    if (!formData.year_class) newErrors.year_class = 'Year/Class is required';
+    if (!formData.address) newErrors.address = 'Address is required';
     if (!formData.password) newErrors.password = 'Password is required';
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
@@ -262,7 +237,34 @@ const RegisterForm = ({ register }) => {
     
     setErrors(newErrors);
     if (Object.keys(newErrors).length === 0) {
-      register(formData);
+      try {
+        const response = await fetch('http://localhost:5000/api/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            full_name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            institution: formData.institution,
+            year_class: formData.year_class,
+            address: formData.address,
+            password: formData.password
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          onSuccess();
+        } else {
+          setError(data.message || 'Registration failed. Please try again.');
+        }
+      } catch (error) {
+        setError('Error connecting to server. Please try again.');
+        console.error('Error:', error);
+      }
     }
   };
 
@@ -331,22 +333,38 @@ const RegisterForm = ({ register }) => {
         <label className="form-label">Institution</label>
         <input
           type="text"
-          className="form-control"
+          className={`form-control ${errors.institution ? 'error' : ''}`}
           placeholder="Enter your institution"
           value={formData.institution}
           onChange={(e) => setFormData({...formData, institution: e.target.value})}
         />
+        {errors.institution && <div className="form-error">{errors.institution}</div>}
+      </div>
+      
+      <div className="form-group">
+        <label className="form-label">Year/Class</label>
+        <input
+          type="text"
+          className={`form-control ${errors.year_class ? 'error' : ''}`}
+          placeholder="e.g., First Year, Second Year, Class 12"
+          value={formData.year_class}
+          onChange={(e) => setFormData({...formData, year_class: e.target.value})}
+        />
+        {errors.year_class && <div className="form-error">{errors.year_class}</div>}
       </div>
       
       <div className="form-group">
         <label className="form-label">Address</label>
         <textarea
-          className="form-control"
+          className={`form-control ${errors.address ? 'error' : ''}`}
           placeholder="Enter your address"
           value={formData.address}
           onChange={(e) => setFormData({...formData, address: e.target.value})}
         />
+        {errors.address && <div className="form-error">{errors.address}</div>}
       </div>
+      
+      {error && <div className="form-error">{error}</div>}
       
       <button type="submit" className="btn btn-primary btn-block">Register</button>
     </form>
@@ -356,7 +374,6 @@ const RegisterForm = ({ register }) => {
 // Navigation Bar
 const Navbar = ({ currentPage, setCurrentPage }) => {
   const { user, logout } = useAuth();
-  const { unreadCount } = useNotifications();
 
   return (
     <nav className="navbar">
@@ -377,12 +394,6 @@ const Navbar = ({ currentPage, setCurrentPage }) => {
           History
         </button>
         <button
-          className={`nav-link ${currentPage === 'notifications' ? 'active' : ''}`}
-          onClick={() => setCurrentPage('notifications')}
-        >
-          Notifications {unreadCount > 0 && <span className="badge badge-pending">{unreadCount}</span>}
-        </button>
-        <button
           className={`nav-link ${currentPage === 'profile' ? 'active' : ''}`}
           onClick={() => setCurrentPage('profile')}
         >
@@ -397,16 +408,53 @@ const Navbar = ({ currentPage, setCurrentPage }) => {
 };
 
 // Dashboard Component
-const Dashboard = () => {
+const Dashboard = ({ onNavigate }) => {
   const { user } = useAuth();
+  const [recentDonations] = useState([
+    {
+      id: 'BTH001',
+      items: 2,
+      date: '15/10/2024',
+      status: 'completed'
+    },
+    {
+      id: 'BTH002',
+      items: 2,
+      date: '20/10/2024',
+      status: 'completed'
+    },
+    {
+      id: 'BTH003',
+      items: 1,
+      date: '25/10/2024',
+      status: 'pending'
+    },
+    {
+      id: 'BTH004',
+      items: 1,
+      date: '28/10/2024',
+      status: 'pending'
+    },
+    {
+      id: 'BTH005',
+      items: 1,
+      date: '30/10/2024',
+      status: 'pending'
+    }
+  ]);
+
+  const getStatusBadge = (status) => {
+    const badges = {
+      completed: { text: 'COMPLETED', class: 'completed' },
+      pending: { text: 'PENDING', class: 'pending' }
+    };
+    return badges[status] || badges.pending;
+  };
 
   return (
     <div className="dashboard">
       <div className="dashboard-header">
         <h1>Welcome back, {user.name}! 👋</h1>
-        <div className="dashboard-subtitle">
-          <span className={`badge badge-${user.level.toLowerCase()}`}>{user.level} Donor</span>
-        </div>
       </div>
       
       <div className="stats-grid">
@@ -443,11 +491,47 @@ const Dashboard = () => {
         <div className="stat-card">
           <div className="stat-card-header">
             <div>
-              <div className="stat-card-value">{user.points}</div>
+              <div className="stat-card-value">0</div>
               <div className="stat-card-label">Impact Points</div>
             </div>
             <div className="stat-card-icon">⭐</div>
           </div>
+        </div>
+      </div>
+
+      <div className="card" style={{marginTop: '24px'}}>
+        <div className="card-header" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+          <h3 className="card-title">Recent Donations</h3>
+          <button className="btn btn-sm btn-outline" onClick={onNavigate}>View All</button>
+        </div>
+        <div className="card-body" style={{padding: '0'}}>
+          <table style={{width: '100%', borderCollapse: 'collapse'}}>
+            <thead>
+              <tr style={{borderBottom: '1px solid #e5e5e5', backgroundColor: '#f9f9f9'}}>
+                <th style={{padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#888', textTransform: 'uppercase'}}>Batch ID</th>
+                <th style={{padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#888', textTransform: 'uppercase'}}>Items</th>
+                <th style={{padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#888', textTransform: 'uppercase'}}>Date</th>
+                <th style={{padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#888', textTransform: 'uppercase'}}>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentDonations.map((donation) => {
+                const statusBadge = getStatusBadge(donation.status);
+                return (
+                  <tr key={donation.id} style={{borderBottom: '1px solid #e5e5e5'}}>
+                    <td style={{padding: '16px', fontWeight: '600'}}>{donation.id}</td>
+                    <td style={{padding: '16px'}}>{donation.items} items</td>
+                    <td style={{padding: '16px'}}>{donation.date}</td>
+                    <td style={{padding: '16px'}}>
+                      <span className={`badge badge-${statusBadge.class}`}>
+                        {statusBadge.text}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -470,61 +554,6 @@ const DonationHistory = () => {
             <div className="empty-state-title">No donations yet</div>
             <div className="empty-state-message">Start making a difference by donating items!</div>
           </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Notifications Component
-const NotificationsCenter = () => {
-  const { notifications, markAsRead, deleteNotification } = useNotifications();
-
-  return (
-    <div className="dashboard">
-      <div className="dashboard-header">
-        <h1>Notifications</h1>
-        <p className="dashboard-subtitle">Stay updated on your donations</p>
-      </div>
-      
-      <div className="card">
-        <div className="card-header">
-          <h3 className="card-title">All Notifications</h3>
-        </div>
-        <div className="card-body">
-          {notifications.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-state-icon">🔔</div>
-              <div className="empty-state-title">No notifications</div>
-              <div className="empty-state-message">You're all caught up!</div>
-            </div>
-          ) : (
-            notifications.map(notif => (
-              <div key={notif.id} className={`notification-item ${!notif.read ? 'unread' : ''}`}>
-                <div className="notification-icon">
-                  {notif.type === 'approved' && '✅'}
-                  {notif.type === 'pickup' && '🚚'}
-                  {notif.type === 'distributed' && '✨'}
-                  {notif.type === 'feedback' && '⭐'}
-                </div>
-                <div className="notification-content">
-                  <div className="notification-title">{notif.title}</div>
-                  <div className="notification-message">{notif.message}</div>
-                  <div className="notification-time">{new Date(notif.timestamp).toLocaleString()}</div>
-                </div>
-                <div className="notification-actions">
-                  {!notif.read && (
-                    <button className="btn btn-sm btn-outline" onClick={() => markAsRead(notif.id)}>
-                      Mark Read
-                    </button>
-                  )}
-                  <button className="btn btn-sm btn-outline" onClick={() => deleteNotification(notif.id)}>
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
         </div>
       </div>
     </div>
@@ -653,9 +682,8 @@ const App = () => {
     <div className="app">
       <Navbar currentPage={currentPage} setCurrentPage={setCurrentPage} />
       <div className="container">
-        {currentPage === 'dashboard' && <Dashboard />}
+        {currentPage === 'dashboard' && <Dashboard onNavigate={() => setCurrentPage('history')} />}
         {currentPage === 'history' && <DonationHistory />}
-        {currentPage === 'notifications' && <NotificationsCenter />}
         {currentPage === 'profile' && <ProfilePage />}
       </div>
     </div>
@@ -666,8 +694,6 @@ const App = () => {
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <AuthProvider>
-    <NotificationProvider>
-      <App />
-    </NotificationProvider>
+    <App />
   </AuthProvider>
 );
