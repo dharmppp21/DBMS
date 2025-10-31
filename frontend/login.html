@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Student Donation System - Login</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .login-container {
+      background: white;
+      padding: 40px;
+      border-radius: 10px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      width: 100%;
+      max-width: 400px;
+    }
+    .login-container h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 30px;
+      font-size: 24px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #555;
+      font-weight: bold;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+    .form-group input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    .login-btn {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .login-btn:hover {
+      transform: translateY(-2px);
+    }
+    .login-btn:active {
+      transform: translateY(0);
+    }
+    .error {
+      color: #d32f2f;
+      text-align: center;
+      margin-top: 15px;
+      font-size: 14px;
+    }
+    .success {
+      color: #388e3c;
+      text-align: center;
+      margin-top: 15px;
+      font-size: 14px;
+    }
+    .spinner {
+      display: none;
+      text-align: center;
+      margin-top: 15px;
+    }
+    .spinner.show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <h1>Student Donation System</h1>
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="identifier">Email or ID</label>
+        <input 
+          type="text" 
+          id="identifier" 
+          name="identifier" 
+          placeholder="Enter your email or ID" 
+          required
+        >
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input 
+          type="password" 
+          id="password" 
+          name="password" 
+          placeholder="Enter your password" 
+          required
+        >
+      </div>
+      <button type="submit" class="login-btn">Login</button>
+    </form>
+    <div class="error" id="errorMsg"></div>
+    <div class="success" id="successMsg"></div>
+    <div class="spinner" id="spinner">Loading...</div>
+  </div>
+  <script src="login.js"></script>
+</body>
+</html>
