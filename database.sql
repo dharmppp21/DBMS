@@ -12,6 +12,7 @@ CREATE TABLE DONORS (
     institution VARCHAR(200) NOT NULL,
     year_class VARCHAR(50) NOT NULL,
     address TEXT NOT NULL,
+    password VARCHAR(255),
     registration_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     status ENUM('active', 'inactive') DEFAULT 'active'
 );
@@ -78,7 +79,24 @@ CREATE TABLE DONATION_BATCHES (
 CREATE INDEX idx_batch_donor_id ON DONATION_BATCHES(donor_id);
 CREATE INDEX idx_batch_approval_status ON DONATION_BATCHES(approval_status);
 
--- 5. DISTRIBUTIONS Table
+-- 5. ITEM_REQUESTS Table
+CREATE TABLE ITEM_REQUESTS (
+    request_id INT PRIMARY KEY AUTO_INCREMENT,
+    recipient_id INT NOT NULL,
+    item_id INT NOT NULL,
+    request_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    request_status ENUM('pending', 'approved', 'rejected', 'fulfilled') DEFAULT 'pending',
+    request_reason TEXT,
+    FOREIGN KEY (recipient_id) REFERENCES RECIPIENTS(recipient_id),
+    FOREIGN KEY (item_id) REFERENCES ITEMS(item_id)
+);
+
+-- Add indexes
+CREATE INDEX idx_request_recipient_id ON ITEM_REQUESTS(recipient_id);
+CREATE INDEX idx_request_item_id ON ITEM_REQUESTS(item_id);
+CREATE INDEX idx_request_status ON ITEM_REQUESTS(request_status);
+
+-- 6. DISTRIBUTIONS Table
 CREATE TABLE DISTRIBUTIONS (
     distribution_id INT PRIMARY KEY AUTO_INCREMENT,
     item_id INT NOT NULL,

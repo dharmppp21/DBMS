@@ -29,61 +29,6 @@ const MOCK_DATA = {
       author: "Sunita Devi",
       role: "Parent/Guardian"
     }
-  ],
-
-  recipients: [
-    {
-      id: 1,
-      name: "Ananya Sharma",
-      email: "recipient@example.com",
-      phone: "+91 98765 00000",
-      registrationDate: "2024-09-15",
-      password: "password123"
-    },
-    {
-      id: 2,
-      name: "Rahul Kumar",
-      email: "rahul@example.com",
-      phone: "+91 99876 54321",
-      registrationDate: "2024-09-10"
-    },
-    {
-      id: 3,
-      name: "Priya Singh",
-      email: "priya@example.com",
-      phone: "+91 98765 12345",
-      registrationDate: "2024-08-20"
-    }
-  ],
-
-  availableItems: [
-    { id: 1, name: "NCERT Physics Textbook", category: "Books", condition: "Good", value: 450, donorInstitution: "IIT Delhi", status: "available" },
-    { id: 2, name: "Scientific Calculator", category: "Electronics", condition: "Excellent", value: 800, donorInstitution: "DU", status: "available" },
-    { id: 3, name: "Winter Jacket", category: "Clothes", condition: "Good", value: 1200, donorInstitution: "IIT Bombay", status: "available" },
-    { id: 4, name: "Geometry Box Set", category: "Stationery", condition: "New", value: 200, donorInstitution: "JNU", status: "available" },
-    { id: 5, name: "School Bag", category: "Accessories", condition: "Excellent", value: 600, donorInstitution: "BITS Pilani", status: "available" },
-    { id: 6, name: "Chemistry Reference Book", category: "Books", condition: "Good", value: 500, donorInstitution: "IIT Delhi", status: "available" },
-    { id: 7, name: "Laptop Bag", category: "Accessories", condition: "Fair", value: 400, donorInstitution: "DU", status: "available" },
-    { id: 8, name: "Notebook Set (10 pcs)", category: "Stationery", condition: "New", value: 300, donorInstitution: "IIT Bombay", status: "available" },
-    { id: 9, name: "English Dictionary", category: "Books", condition: "Excellent", value: 350, donorInstitution: "JNU", status: "available" },
-    { id: 10, name: "Sports Shoes", category: "Clothes", condition: "Good", value: 800, donorInstitution: "BITS Pilani", status: "available" },
-    { id: 11, name: "Compass and Ruler Set", category: "Stationery", condition: "New", value: 150, donorInstitution: "IIT Delhi", status: "available" },
-    { id: 12, name: "Mathematics Reference", category: "Books", condition: "Excellent", value: 550, donorInstitution: "IIT Bombay", status: "available" },
-    { id: 13, name: "Digital Watch", category: "Electronics", condition: "Good", value: 600, donorInstitution: "DU", status: "available" },
-    { id: 14, name: "School Uniform (Size M)", category: "Clothes", condition: "New", value: 900, donorInstitution: "JNU", status: "available" },
-    { id: 15, name: "Colored Pencil Set", category: "Stationery", condition: "New", value: 250, donorInstitution: "BITS Pilani", status: "available" }
-  ],
-
-  requests: [
-    { id: 1, requestId: "REQ001", itemId: 2, itemName: "Scientific Calculator", category: "Electronics", quantity: 1, requestedDate: "2024-10-25", status: "approved" },
-    { id: 2, requestId: "REQ002", itemId: 6, itemName: "Chemistry Reference Book", category: "Books", quantity: 2, requestedDate: "2024-10-28", status: "pending" },
-    { id: 3, requestId: "REQ003", itemId: 8, itemName: "Notebook Set (10 pcs)", category: "Stationery", quantity: 3, requestedDate: "2024-10-20", status: "fulfilled" }
-  ],
-
-  distributions: [
-    { id: 1, distributionId: "DIST001", itemName: "Mathematics Textbook", category: "Books", receivedDate: "2024-10-15", condition: "Good", value: 550, donor: "IIT Delhi Alumni", rating: 5, feedback: "Excellent book in great condition. Helped me a lot!" },
-    { id: 2, distributionId: "DIST002", itemName: "School Uniform", category: "Clothes", receivedDate: "2024-10-18", condition: "Excellent", value: 900, donor: "Anonymous", rating: null, feedback: null },
-    { id: 3, distributionId: "DIST003", itemName: "Pen Set", category: "Stationery", receivedDate: "2024-10-22", condition: "New", value: 150, donor: "DU Student Council", rating: 4, feedback: "Nice quality pens. Thank you!" }
   ]
 };
 
@@ -102,32 +47,70 @@ const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const login = (email, password) => {
-    const foundUser = MOCK_DATA.recipients.find(u =>
-      (u.email === email || u.phone === email) && u.password === password
-    );
-    if (foundUser) {
-      const userData = { ...foundUser };
-      delete userData.password;
-      setUser(userData);
-      setIsAuthenticated(true);
-      window.sessionUser = userData;
-      return true;
+  const login = async (email, password) => {
+    try {
+      const response = await fetch('http://localhost:5000/api/recipient/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier: email })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const userData = {
+          id: data.recipient_id,
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          registrationDate: data.registrationDate
+        };
+        setUser(userData);
+        setIsAuthenticated(true);
+        window.sessionUser = userData;
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
     }
-    return false;
   };
 
-  const register = (userData) => {
-    const newUser = {
-      id: MOCK_DATA.recipients.length + 1,
-      ...userData,
-      registrationDate: new Date().toISOString().split('T')[0]
-    };
-    MOCK_DATA.recipients.push(newUser);
-    setUser(newUser);
-    setIsAuthenticated(true);
-    window.sessionUser = newUser;
-    return true;
+  const register = async (userData) => {
+    try {
+      const response = await fetch('http://localhost:5000/api/recipient/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: userData.name,
+          age: parseInt(userData.age) || 15,
+          gender: userData.gender || 'Other',
+          guardian_name: userData.guardianName || 'Guardian',
+          guardian_contact: userData.phone,
+          address: userData.address || 'Not provided',
+          needs_description: userData.needs || ''
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const newUser = {
+          id: data.recipient_id,
+          name: userData.name,
+          email: userData.phone,
+          phone: userData.phone,
+          registrationDate: new Date().toISOString().split('T')[0]
+        };
+        setUser(newUser);
+        setIsAuthenticated(true);
+        window.sessionUser = newUser;
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Registration error:', error);
+      return false;
+    }
   };
 
   const logout = () => {
@@ -272,16 +255,17 @@ function LoginPage({ setCurrentPage, toggleTheme, theme }) {
   const [error, setError] = useState('');
   const { login } = useContext(AuthContext);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (!email || !password) {
-      setError('Email and password are required');
+    if (!email) {
+      setError('Phone number or ID is required');
       return;
     }
-    if (login(email, password)) {
+    const success = await login(email, password);
+    if (success) {
       setCurrentPage('dashboard');
     } else {
-      setError('Invalid email or password');
+      setError('Invalid credentials');
     }
   };
 
@@ -357,11 +341,13 @@ function RegisterPage({ setCurrentPage, toggleTheme, theme }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     if (validateForm()) {
-      register({ ...formData, password: 'password123' });
-      setCurrentPage('dashboard');
+      const success = await register({ ...formData, password: 'password123' });
+      if (success) {
+        setCurrentPage('dashboard');
+      }
     }
   };
 
@@ -420,9 +406,54 @@ function RegisterPage({ setCurrentPage, toggleTheme, theme }) {
 // ============= DASHBOARD =============
 function Dashboard() {
   const { user } = useContext(AuthContext);
-  const itemsReceived = MOCK_DATA.distributions.length;
-  const pendingRequests = MOCK_DATA.requests.filter(r => r.status === 'pending').length;
-  const activeDistributions = MOCK_DATA.distributions.filter(d => !d.rating).length;
+  const [stats, setStats] = useState({ itemsReceived: 0, pendingRequests: 0, totalValue: 0 });
+  const [recentRequests, setRecentRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        const [statsResponse, requestsResponse] = await Promise.all([
+          fetch(`http://localhost:5000/api/recipient/${user.id}/dashboard`),
+          fetch(`http://localhost:5000/api/recipient/${user.id}/requests`)
+        ]);
+
+        if (statsResponse.ok) {
+          const data = await statsResponse.json();
+          setStats({
+            itemsReceived: data.stats.itemsReceived || 0,
+            pendingRequests: data.stats.pendingRequests || 0,
+            totalValue: data.stats.totalValue || 0
+          });
+        }
+
+        if (requestsResponse.ok) {
+          const data = await requestsResponse.json();
+          setRecentRequests((data.requests || []).slice(0, 5));
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDashboard();
+  }, [user.id]);
+
+  if (loading) {
+    return React.createElement('div', { style: { textAlign: 'center', padding: '48px' } }, 'Loading...');
+  }
+
+  const getStatusBadgeStyle = (status) => {
+    const baseStyle = { padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '500' };
+    switch(status) {
+      case 'pending': return { ...baseStyle, backgroundColor: '#FEF3C7', color: '#92400E' };
+      case 'approved': return { ...baseStyle, backgroundColor: '#D1FAE5', color: '#065F46' };
+      case 'rejected': return { ...baseStyle, backgroundColor: '#FEE2E2', color: '#991B1B' };
+      case 'fulfilled': return { ...baseStyle, backgroundColor: '#DBEAFE', color: '#1E40AF' };
+      default: return { ...baseStyle, backgroundColor: '#F3F4F6', color: '#1F2937' };
+    }
+  };
 
   return React.createElement(
     'div',
@@ -434,20 +465,69 @@ function Dashboard() {
       React.createElement(
         'div',
         { className: 'card', style: { padding: '24px', textAlign: 'center' } },
-        React.createElement('h3', { style: { fontSize: '32px', margin: '0 0 8px 0', color: 'var(--color-primary)' } }, itemsReceived),
+        React.createElement('h3', { style: { fontSize: '32px', margin: '0 0 8px 0', color: 'var(--color-primary)' } }, stats.itemsReceived),
         React.createElement('p', { style: { color: 'var(--color-text-secondary)', margin: 0 } }, 'Items Received')
       ),
       React.createElement(
         'div',
         { className: 'card', style: { padding: '24px', textAlign: 'center' } },
-        React.createElement('h3', { style: { fontSize: '32px', margin: '0 0 8px 0', color: 'var(--color-primary)' } }, pendingRequests),
+        React.createElement('h3', { style: { fontSize: '32px', margin: '0 0 8px 0', color: 'var(--color-primary)' } }, stats.pendingRequests),
         React.createElement('p', { style: { color: 'var(--color-text-secondary)', margin: 0 } }, 'Pending Requests')
       ),
-      React.createElement(
+       React.createElement(
+         'div',
+         { className: 'card', style: { padding: '24px', textAlign: 'center' } },
+         React.createElement('h3', { style: { fontSize: '32px', margin: '0 0 8px 0', color: 'var(--color-primary)' } }, `₹${parseFloat(stats.totalValue).toFixed(2)}`),
+         React.createElement('p', { style: { color: 'var(--color-text-secondary)', margin: 0 } }, 'Total Value Received')
+       )
+    ),
+    React.createElement(
+      'div',
+      { className: 'card', style: { padding: '24px' } },
+      React.createElement('h2', { style: { marginBottom: '16px', fontSize: '20px', fontWeight: '600' } }, 'Recent Request History'),
+      recentRequests.length > 0 ? React.createElement(
         'div',
-        { className: 'card', style: { padding: '24px', textAlign: 'center' } },
-        React.createElement('h3', { style: { fontSize: '32px', margin: '0 0 8px 0', color: 'var(--color-primary)' } }, activeDistributions),
-        React.createElement('p', { style: { color: 'var(--color-text-secondary)', margin: 0 } }, 'Active Distributions')
+        { style: { overflowX: 'auto' } },
+        React.createElement(
+          'table',
+          { style: { width: '100%', borderCollapse: 'collapse' } },
+          React.createElement(
+            'thead',
+            null,
+            React.createElement(
+              'tr',
+              { style: { borderBottom: '2px solid var(--color-card-border)' } },
+              React.createElement('th', { style: { padding: '12px', textAlign: 'left', fontWeight: '600', color: 'var(--color-text-secondary)', fontSize: '14px' } }, 'Request ID'),
+              React.createElement('th', { style: { padding: '12px', textAlign: 'left', fontWeight: '600', color: 'var(--color-text-secondary)', fontSize: '14px' } }, 'Item Name'),
+              React.createElement('th', { style: { padding: '12px', textAlign: 'left', fontWeight: '600', color: 'var(--color-text-secondary)', fontSize: '14px' } }, 'Category'),
+              React.createElement('th', { style: { padding: '12px', textAlign: 'left', fontWeight: '600', color: 'var(--color-text-secondary)', fontSize: '14px' } }, 'Quantity'),
+              React.createElement('th', { style: { padding: '12px', textAlign: 'left', fontWeight: '600', color: 'var(--color-text-secondary)', fontSize: '14px' } }, 'Request Date'),
+              React.createElement('th', { style: { padding: '12px', textAlign: 'left', fontWeight: '600', color: 'var(--color-text-secondary)', fontSize: '14px' } }, 'Status')
+            )
+          ),
+          React.createElement(
+            'tbody',
+            null,
+            recentRequests.map(request =>
+              React.createElement(
+                'tr',
+                { key: request.request_id, style: { borderBottom: '1px solid var(--color-card-border)' } },
+                React.createElement('td', { style: { padding: '12px', color: 'var(--color-text-secondary)' } }, `#${request.request_id}`),
+                React.createElement('td', { style: { padding: '12px', fontWeight: '500' } }, request.item_name),
+                React.createElement('td', { style: { padding: '12px', textTransform: 'capitalize' } }, request.category),
+                React.createElement('td', { style: { padding: '12px' } }, request.quantity_requested || 1),
+                React.createElement('td', { style: { padding: '12px', color: 'var(--color-text-secondary)' } }, new Date(request.request_date).toLocaleDateString()),
+                React.createElement('td', { style: { padding: '12px' } },
+                  React.createElement('span', { style: getStatusBadgeStyle(request.request_status) }, request.request_status.toUpperCase())
+                )
+              )
+            )
+          )
+        )
+      ) : React.createElement(
+        'div',
+        { style: { textAlign: 'center', padding: '24px', color: 'var(--color-text-secondary)' } },
+        React.createElement('p', null, 'No requests yet. Browse items to make your first request!')
       )
     )
   );
@@ -455,15 +535,35 @@ function Dashboard() {
 
 // ============= BROWSE ITEMS =============
 function BrowseItems() {
+  const { user } = useContext(AuthContext);
   const [filters, setFilters] = useState({ category: '', condition: '', search: '' });
   const [selectedItem, setSelectedItem] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [showModal, setShowModal] = useState(false);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredItems = MOCK_DATA.availableItems.filter(item =>
+  useEffect(() => {
+    const fetchItems = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/items/available');
+        if (response.ok) {
+          const data = await response.json();
+          setItems(data.items || []);
+        }
+      } catch (error) {
+        console.error('Error fetching items:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchItems();
+  }, []);
+
+  const filteredItems = items.filter(item =>
     (!filters.category || item.category === filters.category) &&
-    (!filters.condition || item.condition === filters.condition) &&
-    (!filters.search || item.name.toLowerCase().includes(filters.search.toLowerCase()))
+    (!filters.condition || item.condition_status === filters.condition) &&
+    (!filters.search || item.item_name.toLowerCase().includes(filters.search.toLowerCase()))
   );
 
   const handleRequestItem = (item) => {
@@ -472,21 +572,32 @@ function BrowseItems() {
     setShowModal(true);
   };
 
-  const handleSubmitRequest = () => {
-    const newRequest = {
-      id: MOCK_DATA.requests.length + 1,
-      requestId: `REQ${String(MOCK_DATA.requests.length + 1).padStart(3, '0')}`,
-      itemId: selectedItem.id,
-      itemName: selectedItem.name,
-      category: selectedItem.category,
-      quantity: quantity,
-      requestedDate: new Date().toISOString().split('T')[0],
-      status: 'pending'
-    };
-    MOCK_DATA.requests.push(newRequest);
-    setShowModal(false);
-    alert('Request submitted successfully!');
+  const handleSubmitRequest = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/recipient/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipient_id: user.id,
+          item_id: selectedItem.item_id,
+          quantity: quantity
+        })
+      });
+      if (response.ok) {
+        setShowModal(false);
+        alert('Request submitted successfully!');
+      } else {
+        alert('Failed to submit request');
+      }
+    } catch (error) {
+      console.error('Error submitting request:', error);
+      alert('Error submitting request');
+    }
   };
+
+  if (loading) {
+    return React.createElement('div', { style: { textAlign: 'center', padding: '48px' } }, 'Loading...');
+  }
 
   return React.createElement(
     'div',
@@ -531,21 +642,26 @@ function BrowseItems() {
         React.createElement('input', { type: 'text', className: 'form-control', placeholder: 'Search items...', value: filters.search, onChange: (e) => setFilters({ ...filters, search: e.target.value }) })
       )
     ),
-    React.createElement(
+    filteredItems.length > 0 ? React.createElement(
       'div',
       { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' } },
       filteredItems.map(item =>
         React.createElement(
           'div',
-          { key: item.id, className: 'card', style: { padding: '20px' } },
-          React.createElement('h3', { style: { margin: '0 0 8px 0', fontSize: '18px' } }, item.name),
+          { key: item.item_id, className: 'card', style: { padding: '20px' } },
+          React.createElement('h3', { style: { margin: '0 0 8px 0', fontSize: '18px' } }, item.item_name),
           React.createElement('p', { style: { color: 'var(--color-text-secondary)', fontSize: '14px' } }, `Category: ${item.category}`),
-          React.createElement('p', { style: { color: 'var(--color-text-secondary)', fontSize: '14px' } }, `Condition: ${item.condition}`),
-          React.createElement('p', { style: { color: 'var(--color-text-secondary)', fontSize: '14px' } }, `Value: ₹${item.value}`),
-          React.createElement('p', { style: { color: 'var(--color-text-secondary)', fontSize: '12px' } }, `From: ${item.donorInstitution}`),
+          React.createElement('p', { style: { color: 'var(--color-text-secondary)', fontSize: '14px' } }, `Condition: ${item.condition_status}`),
+          React.createElement('p', { style: { color: 'var(--color-text-secondary)', fontSize: '14px' } }, `Value: ₹${item.estimated_value}`),
+          React.createElement('p', { style: { color: 'var(--color-text-secondary)', fontSize: '12px' } }, `Donor: ${item.donor_name || 'Anonymous'}`),
           React.createElement('button', { className: 'btn btn--primary btn--full-width', style: { marginTop: '12px' }, onClick: () => handleRequestItem(item) }, 'Request Item')
         )
       )
+    ) : React.createElement(
+      'div',
+      { className: 'card', style: { padding: '48px', textAlign: 'center' } },
+      React.createElement('h2', { style: { marginBottom: '16px', color: 'var(--color-text-secondary)' } }, 'No Items Available'),
+      React.createElement('p', { style: { color: 'var(--color-text-secondary)' } }, 'There are currently no items matching your filters. Please check back later or try adjusting your filters.')
     ),
     showModal && React.createElement(
       'div',
@@ -566,7 +682,7 @@ function BrowseItems() {
             'div',
             { style: { marginBottom: '16px' } },
             React.createElement('label', { style: { display: 'block', marginBottom: '8px', fontWeight: '500' } }, 'Item Name'),
-            React.createElement('input', { type: 'text', className: 'form-control', value: selectedItem.name, disabled: true })
+            React.createElement('input', { type: 'text', className: 'form-control', value: selectedItem.item_name, disabled: true })
           ),
           React.createElement(
             'div',
@@ -578,7 +694,7 @@ function BrowseItems() {
             'div',
             { style: { marginBottom: '16px' } },
             React.createElement('label', { style: { display: 'block', marginBottom: '8px', fontWeight: '500' } }, 'Quantity Required'),
-            React.createElement('input', { type: 'number', className: 'form-control', value: quantity, onChange: (e) => setQuantity(Math.min(10, Math.max(1, parseInt(e.target.value) || 1))), min: 1, max: 10 })
+            React.createElement('input', { type: 'number', className: 'form-control', value: quantity, onChange: (e) => setQuantity(Math.min(selectedItem.quantity, Math.max(1, parseInt(e.target.value) || 1))), min: 1, max: selectedItem.quantity })
           )
         ),
         React.createElement(
@@ -594,20 +710,51 @@ function BrowseItems() {
 
 // ============= MY REQUESTS =============
 function MyRequests() {
-  const handleCancelRequest = (requestId) => {
-    const index = MOCK_DATA.requests.findIndex(r => r.requestId === requestId);
-    if (index > -1 && MOCK_DATA.requests[index].status === 'pending') {
-      MOCK_DATA.requests.splice(index, 1);
-      alert('Request cancelled');
-      window.location.reload();
+  const { user } = useContext(AuthContext);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchRequests = async () => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/recipient/${user.id}/requests`);
+      if (response.ok) {
+        const data = await response.json();
+        setRequests(data.requests || []);
+      }
+    } catch (error) {
+      console.error('Error fetching requests:', error);
+    } finally {
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchRequests();
+  }, [user.id]);
+
+  const handleCancelRequest = async (requestId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/recipient/request/${requestId}`, {
+        method: 'DELETE'
+      });
+      if (response.ok) {
+        alert('Request cancelled');
+        fetchRequests();
+      }
+    } catch (error) {
+      console.error('Error cancelling request:', error);
+    }
+  };
+
+  if (loading) {
+    return React.createElement('div', { style: { textAlign: 'center', padding: '48px' } }, 'Loading...');
+  }
 
   return React.createElement(
     'div',
     { style: { maxWidth: '1200px', margin: '0 auto' } },
     React.createElement('h1', { style: { marginBottom: '24px' } }, 'My Requests'),
-    React.createElement(
+    requests.length > 0 ? React.createElement(
       'div',
       { style: { overflowX: 'auto' } },
       React.createElement(
@@ -630,63 +777,102 @@ function MyRequests() {
         React.createElement(
           'tbody',
           null,
-          MOCK_DATA.requests.map(request =>
+          requests.map(request =>
             React.createElement(
               'tr',
-              { key: request.id, style: { borderBottom: '1px solid var(--color-card-border)' } },
-              React.createElement('td', { style: { padding: '12px' } }, request.requestId),
-              React.createElement('td', { style: { padding: '12px' } }, request.itemName),
-              React.createElement('td', { style: { padding: '12px' } }, request.quantity),
-              React.createElement('td', { style: { padding: '12px' } }, request.requestedDate),
+              { key: request.request_id, style: { borderBottom: '1px solid var(--color-card-border)' } },
+              React.createElement('td', { style: { padding: '12px' } }, request.request_id),
+              React.createElement('td', { style: { padding: '12px' } }, request.item_name),
+              React.createElement('td', { style: { padding: '12px' } }, request.quantity_requested || 1),
+              React.createElement('td', { style: { padding: '12px' } }, new Date(request.request_date).toLocaleDateString()),
               React.createElement('td', { style: { padding: '12px' } },
                 React.createElement(
                   'span',
                   { style: { padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600',
-                      backgroundColor: request.status === 'pending' ? 'rgba(251, 191, 36, 0.1)' :
-                        request.status === 'approved' ? 'rgba(16, 185, 129, 0.1)' :
-                        request.status === 'fulfilled' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(192, 21, 47, 0.1)',
-                      color: request.status === 'pending' ? '#d97706' :
-                        request.status === 'approved' ? '#059669' :
-                        request.status === 'fulfilled' ? '#2563eb' : '#dc2626'
+                      backgroundColor: request.request_status === 'pending' ? 'rgba(251, 191, 36, 0.1)' :
+                        request.request_status === 'approved' ? 'rgba(16, 185, 129, 0.1)' :
+                        request.request_status === 'fulfilled' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(192, 21, 47, 0.1)',
+                      color: request.request_status === 'pending' ? '#d97706' :
+                        request.request_status === 'approved' ? '#059669' :
+                        request.request_status === 'fulfilled' ? '#2563eb' : '#dc2626'
                     } },
-                  request.status.charAt(0).toUpperCase() + request.status.slice(1)
+                  request.request_status.charAt(0).toUpperCase() + request.request_status.slice(1)
                 )
               ),
               React.createElement(
                 'td',
                 { style: { padding: '12px' } },
-                request.status === 'pending' && React.createElement('button', { className: 'btn btn--sm btn--secondary', onClick: () => handleCancelRequest(request.requestId) }, 'Cancel')
+                request.request_status === 'pending' && React.createElement('button', { className: 'btn btn--sm btn--secondary', onClick: () => handleCancelRequest(request.request_id) }, 'Cancel')
               )
             )
           )
         )
       )
+    ) : React.createElement(
+      'div',
+      { className: 'card', style: { padding: '48px', textAlign: 'center' } },
+      React.createElement('h2', { style: { marginBottom: '16px', color: 'var(--color-text-secondary)' } }, 'No Requests Yet'),
+      React.createElement('p', { style: { color: 'var(--color-text-secondary)' } }, 'You haven\'t made any item requests yet. Browse available items to get started!')
     )
   );
 }
 
 // ============= RECEIVED ITEMS =============
 function ReceivedItems() {
+  const { user } = useContext(AuthContext);
+  const [distributions, setDistributions] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [ratingItem, setRatingItem] = useState(null);
   const [rating, setRating] = useState(5);
   const [feedback, setFeedback] = useState('');
   const [showModal, setShowModal] = useState(false);
 
-  const handleSubmitRating = () => {
-    if (ratingItem) {
-      ratingItem.rating = rating;
-      ratingItem.feedback = feedback;
-      setShowModal(false);
-      alert('Rating submitted!');
-      window.location.reload();
+  const fetchDistributions = async () => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/recipient/${user.id}/distributions`);
+      if (response.ok) {
+        const data = await response.json();
+        setDistributions(data.distributions || []);
+      }
+    } catch (error) {
+      console.error('Error fetching distributions:', error);
+    } finally {
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchDistributions();
+  }, [user.id]);
+
+  const handleSubmitRating = async () => {
+    if (ratingItem) {
+      try {
+        const response = await fetch(`http://localhost:5000/api/recipient/distribution/${ratingItem.distribution_id}/rate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rating, feedback })
+        });
+        if (response.ok) {
+          setShowModal(false);
+          alert('Rating submitted!');
+          fetchDistributions();
+        }
+      } catch (error) {
+        console.error('Error submitting rating:', error);
+      }
+    }
+  };
+
+  if (loading) {
+    return React.createElement('div', { style: { textAlign: 'center', padding: '48px' } }, 'Loading...');
+  }
 
   return React.createElement(
     'div',
     { style: { maxWidth: '1200px', margin: '0 auto' } },
     React.createElement('h1', { style: { marginBottom: '24px' } }, 'Received Items'),
-    React.createElement(
+    distributions.length > 0 ? React.createElement(
       'div',
       { style: { overflowX: 'auto' } },
       React.createElement(
@@ -701,8 +887,7 @@ function ReceivedItems() {
             React.createElement('th', { style: { padding: '12px', textAlign: 'left', fontWeight: '600' } }, 'Distribution ID'),
             React.createElement('th', { style: { padding: '12px', textAlign: 'left', fontWeight: '600' } }, 'Item Name'),
             React.createElement('th', { style: { padding: '12px', textAlign: 'left', fontWeight: '600' } }, 'Received Date'),
-            React.createElement('th', { style: { padding: '12px', textAlign: 'left', fontWeight: '600' } }, 'Condition'),
-            React.createElement('th', { style: { padding: '12px', textAlign: 'left', fontWeight: '600' } }, 'Donor'),
+            React.createElement('th', { style: { padding: '12px', textAlign: 'left', fontWeight: '600' } }, 'Quantity'),
             React.createElement('th', { style: { padding: '12px', textAlign: 'left', fontWeight: '600' } }, 'Rating'),
             React.createElement('th', { style: { padding: '12px', textAlign: 'left', fontWeight: '600' } }, 'Action')
           )
@@ -710,25 +895,29 @@ function ReceivedItems() {
         React.createElement(
           'tbody',
           null,
-          MOCK_DATA.distributions.map(item =>
+          distributions.map(item =>
             React.createElement(
               'tr',
-              { key: item.id, style: { borderBottom: '1px solid var(--color-card-border)' } },
-              React.createElement('td', { style: { padding: '12px' } }, item.distributionId),
-              React.createElement('td', { style: { padding: '12px' } }, item.itemName),
-              React.createElement('td', { style: { padding: '12px' } }, item.receivedDate),
-              React.createElement('td', { style: { padding: '12px' } }, item.condition),
-              React.createElement('td', { style: { padding: '12px' } }, item.donor),
+              { key: item.distribution_id, style: { borderBottom: '1px solid var(--color-card-border)' } },
+              React.createElement('td', { style: { padding: '12px' } }, item.distribution_id),
+              React.createElement('td', { style: { padding: '12px' } }, item.item_name),
+              React.createElement('td', { style: { padding: '12px' } }, new Date(item.distribution_date).toLocaleDateString()),
+              React.createElement('td', { style: { padding: '12px' } }, item.quantity),
               React.createElement('td', { style: { padding: '12px' } },
                 item.rating ? React.createElement('span', null, '⭐ '.repeat(item.rating)) : React.createElement('span', { style: { color: 'var(--color-text-secondary)' } }, 'Not rated')
               ),
               React.createElement('td', { style: { padding: '12px' } },
-                !item.rating && React.createElement('button', { className: 'btn btn--sm btn--primary', onClick: () => { setRatingItem(item); setShowModal(true); } }, 'Rate')
+                !item.rating && React.createElement('button', { className: 'btn btn--sm btn--primary', onClick: () => { setRatingItem(item); setRating(5); setFeedback(''); setShowModal(true); } }, 'Rate')
               )
             )
           )
         )
       )
+    ) : React.createElement(
+      'div',
+      { className: 'card', style: { padding: '48px', textAlign: 'center' } },
+      React.createElement('h2', { style: { marginBottom: '16px', color: 'var(--color-text-secondary)' } }, 'No Items Received Yet'),
+      React.createElement('p', { style: { color: 'var(--color-text-secondary)' } }, 'You haven\'t received any items yet. Once your requests are approved and items are distributed, they will appear here.')
     ),
     showModal && React.createElement(
       'div',
@@ -745,7 +934,7 @@ function ReceivedItems() {
         React.createElement(
           'div',
           { className: 'modal-body' },
-          React.createElement('p', { style: { marginBottom: '16px' } }, `Item: ${ratingItem?.itemName}`),
+          React.createElement('p', { style: { marginBottom: '16px' } }, `Item: ${ratingItem?.item_name}`),
           React.createElement(
             'div',
             { style: { marginBottom: '16px' } },
@@ -792,13 +981,56 @@ function ProfileSettings() {
   const { user, logout } = useContext(AuthContext);
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({ name: user.name, email: user.email, phone: user.phone });
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleSave = () => {
-    Object.assign(user, formData);
-    window.sessionUser = user;
-    setEditMode(false);
-    alert('Profile updated!');
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/recipient/${user.id}/profile`);
+        if (response.ok) {
+          const data = await response.json();
+          setProfile(data);
+          setFormData({
+            name: data.full_name,
+            email: data.phone,
+            phone: data.guardian_contact
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, [user.id]);
+
+  const handleSave = async () => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/recipient/${user.id}/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: formData.name,
+          guardian_contact: formData.phone
+        })
+      });
+      if (response.ok) {
+        Object.assign(user, { name: formData.name, phone: formData.phone });
+        window.sessionUser = user;
+        setEditMode(false);
+        alert('Profile updated!');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Failed to update profile');
+    }
   };
+
+  if (loading) {
+    return React.createElement('div', { style: { textAlign: 'center', padding: '48px' } }, 'Loading...');
+  }
 
   return React.createElement(
     'div',
@@ -825,23 +1057,20 @@ function ProfileSettings() {
         React.createElement(
           'div',
           { style: { marginBottom: '16px' } },
-          React.createElement('label', { style: { display: 'block', marginBottom: '8px', fontWeight: '500' } }, 'Email'),
-          React.createElement('input', { type: 'email', className: 'form-control', value: formData.email, onChange: (e) => setFormData({ ...formData, email: e.target.value }) })
-        ),
-        React.createElement(
-          'div',
-          { style: { marginBottom: '16px' } },
-          React.createElement('label', { style: { display: 'block', marginBottom: '8px', fontWeight: '500' } }, 'Phone'),
+          React.createElement('label', { style: { display: 'block', marginBottom: '8px', fontWeight: '500' } }, 'Guardian Contact'),
           React.createElement('input', { type: 'tel', className: 'form-control', value: formData.phone, onChange: (e) => setFormData({ ...formData, phone: e.target.value }) })
         ),
         React.createElement('button', { className: 'btn btn--primary btn--full-width', onClick: handleSave }, 'Save Changes')
       ) : React.createElement(
         React.Fragment,
         null,
-        React.createElement('p', { style: { marginBottom: '12px' } }, React.createElement('strong', null, 'Name: '), user.name),
-        React.createElement('p', { style: { marginBottom: '12px' } }, React.createElement('strong', null, 'Email: '), user.email),
-        React.createElement('p', { style: { marginBottom: '12px' } }, React.createElement('strong', null, 'Phone: '), user.phone),
-        React.createElement('p', null, React.createElement('strong', null, 'Member Since: '), user.registrationDate)
+        React.createElement('p', { style: { marginBottom: '12px' } }, React.createElement('strong', null, 'Name: '), profile?.full_name),
+        React.createElement('p', { style: { marginBottom: '12px' } }, React.createElement('strong', null, 'Age: '), profile?.age),
+        React.createElement('p', { style: { marginBottom: '12px' } }, React.createElement('strong', null, 'Gender: '), profile?.gender),
+        React.createElement('p', { style: { marginBottom: '12px' } }, React.createElement('strong', null, 'Guardian: '), profile?.guardian_name),
+        React.createElement('p', { style: { marginBottom: '12px' } }, React.createElement('strong', null, 'Guardian Contact: '), profile?.guardian_contact),
+        React.createElement('p', { style: { marginBottom: '12px' } }, React.createElement('strong', null, 'Address: '), profile?.address),
+        React.createElement('p', null, React.createElement('strong', null, 'Registration Date: '), profile ? new Date(profile.registration_date).toLocaleDateString() : '')
       )
     ),
     React.createElement(
